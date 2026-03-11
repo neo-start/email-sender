@@ -1,9 +1,10 @@
 import { observer } from 'mobx-react-lite'
 import { useStore } from '../App'
 import { useState } from 'react'
+import React from 'react'
 import {
   Search, Filter, Calendar, Mail, CheckCircle, XCircle, Clock,
-  AlertCircle, Eye, RefreshCw, X, ChevronDown, ChevronUp,
+  AlertCircle, RefreshCw, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -310,9 +311,8 @@ export const HistoryPage = observer(() => {
                     </TableHeader>
                     <TableBody>
                       {filteredHistory.map(job => (
-                        <>
+                        <React.Fragment key={job.id}>
                           <TableRow
-                            key={job.id}
                             className="cursor-pointer hover:bg-muted/50"
                             onClick={() => toggleExpand(job.id)}
                           >
@@ -343,7 +343,7 @@ export const HistoryPage = observer(() => {
                             </TableCell>
                           </TableRow>
                           {expandedJobId === job.id && renderDetailRow(job)}
-                        </>
+                        </React.Fragment>
                       ))}
                     </TableBody>
                   </Table>

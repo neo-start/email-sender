@@ -49,6 +49,7 @@ export const SendPage = observer(() => {
 
   // 发送进度日志
   const [sendLog, setSendLog] = useState<LogEntry[]>([]);
+  const [sendTotal, setSendTotal] = useState(0); // 本次发送总数
   const [sendResult, setSendResult] = useState<{
     total: number;
     successCount: number;
@@ -117,6 +118,7 @@ export const SendPage = observer(() => {
     // 清空上次结果
     setSendLog([]);
     setSendResult(null);
+    setSendTotal(selectedContacts.length);
 
     // 注册进度回调
     store.onProgressUpdate = (index, _total, job, success, error) => {
@@ -221,7 +223,7 @@ export const SendPage = observer(() => {
                   </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleSelectAll} disabled={store.isSending}>
-                  {selectedContacts.length === store.contacts.length ? "取消全选" : "全选"}
+                  {visibleContacts.length > 0 && visibleContacts.every(c => selectedContacts.includes(c.id)) ? "取消全选" : "全选"}
                 </Button>
               </div>
             </CardHeader>
@@ -524,7 +526,7 @@ export const SendPage = observer(() => {
                 {/* 进度条 */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{sendLog.length} / {sendLog.length + (store.sendQueue.length)} 封</span>
+                    <span>{sendLog.length} / {sendTotal} 封</span>
                     <span>{store.sendProgress}%</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-white/60">
