@@ -3,11 +3,11 @@ import { useStore } from '../App'
 import { useState } from 'react'
 import Papa from 'papaparse'
 import { Users, Upload, UserPlus, FileText, Tag, Calendar, Mail, Search, Filter, Download } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
-import { Label } from '@/components/ui/Label'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/Card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table'
+import { Label } from '../components/ui/Label'
 
 export const ContactsPage = observer(() => {
   const store = useStore()

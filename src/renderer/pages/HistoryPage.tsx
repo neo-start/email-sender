@@ -2,12 +2,12 @@ import { observer } from 'mobx-react-lite'
 import { useStore } from '../App'
 import { useState } from 'react'
 import { Search, Filter, Calendar, Mail, CheckCircle, XCircle, Clock, AlertCircle, Eye, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
-import { Badge } from '@/components/ui/Badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/Card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table'
+import { Badge } from '../components/ui/Badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs'
 
 export const HistoryPage = observer(() => {
   const store = useStore()

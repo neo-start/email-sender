@@ -8,3 +8,5 @@ data/*.json
 tsconfig.tsbuildinfo
 vite.config.d.ts
 vite.config.js
+out/
+dist/

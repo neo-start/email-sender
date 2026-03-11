@@ -2,10 +2,10 @@ import { observer } from 'mobx-react-lite'
 import { useStore } from '../App'
 import { useState } from 'react'
 import { Mail, Server, Shield, CheckCircle, AlertCircle } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Label } from '@/components/ui/Label'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/Card'
+import { Label } from '../components/ui/Label'
 
 export const ConnectorPage = observer(() => {
   const store = useStore()

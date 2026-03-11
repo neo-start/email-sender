@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx'
-import { Contact, EmailConfig, EmailTemplate, SendJob } from '@/types'
-import { loadAllData, saveEmailConfig, saveContacts, saveSendHistory, backupData } from '@/lib/storage'
-import { emailSender } from '@/lib/emailSender'
+import { Contact, EmailConfig, EmailTemplate, SendJob } from '../types'
+import { loadAllData, saveEmailConfig, saveContacts, saveSendHistory, backupData } from '../lib/storage'
+import { emailSender } from '../lib/emailSender'
 
 export class EmailStore {
   // 邮箱配置

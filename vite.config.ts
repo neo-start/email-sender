@@ -1,25 +1,35 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
+import { resolve } from 'path'
+import { fileURLToPath } from 'url'
 
-// https://vitejs.dev/config/
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
+
 export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@stores': path.resolve(__dirname, './src/stores'),
-      '@lib': path.resolve(__dirname, './src/lib'),
-      '@pages': path.resolve(__dirname, './src/pages'),
+  main: {
+    build: {
+      rollupOptions: {
+        external: ['nodemailer'],
+      },
     },
   },
-  server: {
-    port: 3003,
-    open: true,
+  preload: {
+    build: {
+      rollupOptions: {
+        input: resolve(__dirname, 'src/preload/index.ts'),
+      },
+    },
   },
-  // 允许使用 Node.js API
-  define: {
-    'process.env': {},
+  renderer: {
+    root: resolve(__dirname, 'src/renderer'),
+    build: {
+      rollupOptions: {
+        input: resolve(__dirname, 'src/renderer/index.html'),
+      },
+    },
+    plugins: [react()],
+    server: {
+      port: 3003,
+    },
   },
 })
