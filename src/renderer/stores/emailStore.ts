@@ -110,6 +110,31 @@ export class EmailStore {
     await this.saveContacts()
   }
 
+  // 删除联系人
+  async deleteContact(id: string) {
+    runInAction(() => {
+      this.contacts = this.contacts.filter(c => c.id !== id)
+    })
+    await this.saveContacts()
+  }
+
+  // 清空联系人
+  async clearContacts() {
+    runInAction(() => {
+      this.contacts = []
+    })
+    await this.saveContacts()
+  }
+
+  // 导出联系人为 CSV 字符串
+  exportContactsCSV(): string {
+    const header = 'name,email,group,tags'
+    const rows = this.contacts.map(c =>
+      `"${c.name}","${c.email}","${c.group ?? ''}","${(c.tags ?? []).join(',')}"`
+    )
+    return [header, ...rows].join('\n')
+  }
+
   // 保存联系人
   private async saveContacts() {
     try {
@@ -128,7 +153,10 @@ export class EmailStore {
     })
   }
 
-  // 开始发送队列
+  // 进度回调
+  onProgressUpdate: ((index: number, total: number, job: SendJob, success: boolean, error?: string) => void) | null = null
+
+  // 开始发送队列（逐条发送，实时更新进度）
   async startSending() {
     if (!this.emailConfig) {
       throw new Error('请先配置邮箱')
@@ -138,64 +166,77 @@ export class EmailStore {
       throw new Error('发送队列为空')
     }
 
+    const total = this.sendQueue.length
+
     try {
       runInAction(() => {
         this.isSending = true
         this.sendProgress = 0
         this.error = null
+        // 全部标记为 pending
+        this.sendQueue.forEach(job => { job.status = 'pending' })
       })
 
-      // 检查 Gmail 限制
-      const limitCheck = emailSender.checkGmailLimit(this.sendQueue.length)
-      
-      if (!limitCheck.canSend) {
-        throw new Error(`超过 Gmail 每日限制（500封），当前 ${this.sendQueue.length} 封`)
-      }
+      const results: Array<{ success: boolean; error?: string }> = []
 
-      // 准备邮件数据
-      const emails = this.sendQueue.map(job => {
+      for (let i = 0; i < this.sendQueue.length; i++) {
+        const job = this.sendQueue[i]
         const contact = this.contacts.find(c => c.id === job.contactId)
+
+        // 标记为发送中
+        runInAction(() => {
+          job.status = 'sending'
+        })
+
+        let success = false
+        let errorMsg: string | undefined
+
         if (!contact) {
-          throw new Error(`找不到联系人: ${job.contactId}`)
+          errorMsg = '找不到联系人'
+        } else {
+          try {
+            const result = await emailSender.sendEmail(contact.email, job.subject, job.body)
+            success = result.success
+            if (!success && 'error' in result) errorMsg = result.error
+          } catch (err) {
+            errorMsg = err instanceof Error ? err.message : '发送失败'
+          }
         }
-        
-        return {
-          to: contact.email,
-          subject: job.subject,
-          body: job.body,
-        }
-      })
 
-      // 发送邮件
-      const batchSize = limitCheck.needsBatching ? limitCheck.recommendedBatchSize : emails.length
-      const results = await emailSender.sendBatch(emails, batchSize, 1000)
+        results.push({ success, error: errorMsg })
 
-      // 更新发送状态
-      runInAction(() => {
-        this.sendQueue.forEach((job, index) => {
-          const result = results[index]
-          if (result.success) {
+        runInAction(() => {
+          if (success) {
             job.status = 'sent'
             job.sentAt = new Date().toISOString()
           } else {
             job.status = 'failed'
-            job.error = 'error' in result ? result.error : undefined
+            job.error = errorMsg
           }
+          this.sendProgress = Math.round(((i + 1) / total) * 100)
         })
 
-        // 移动到历史记录
+        // 触发进度回调
+        this.onProgressUpdate?.(i, total, job, success, errorMsg)
+
+        // 发送间隔避免限流（每封间隔 300ms）
+        if (i < this.sendQueue.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 300))
+        }
+      }
+
+      // 移动到历史记录
+      runInAction(() => {
         this.sendHistory.push(...this.sendQueue)
         this.sendQueue = []
         this.sendProgress = 100
       })
 
-      // 保存历史记录
       await saveSendHistory(this.sendHistory)
 
-      // 返回发送结果
       const successCount = results.filter(r => r.success).length
       const failedCount = results.length - successCount
-      
+
       return {
         success: true,
         total: results.length,
