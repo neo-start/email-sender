@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveConfig: (config: unknown) => ipcRenderer.invoke('storage:saveConfig', config),
     saveContacts: (contacts: unknown) => ipcRenderer.invoke('storage:saveContacts', contacts),
     saveHistory: (history: unknown) => ipcRenderer.invoke('storage:saveHistory', history),
+    saveTemplates: (templates: unknown) => ipcRenderer.invoke('storage:saveTemplates', templates),
     backup: () => ipcRenderer.invoke('storage:backup'),
   },
   // Email

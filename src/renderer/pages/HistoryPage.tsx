@@ -1,13 +1,17 @@
 import { observer } from 'mobx-react-lite'
 import { useStore } from '../App'
 import { useState } from 'react'
-import { Search, Filter, Calendar, Mail, CheckCircle, XCircle, Clock, AlertCircle, Eye, RefreshCw } from 'lucide-react'
+import {
+  Search, Filter, Calendar, Mail, CheckCircle, XCircle, Clock,
+  AlertCircle, Eye, RefreshCw, X, ChevronDown, ChevronUp,
+} from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table'
 import { Badge } from '../components/ui/Badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs'
+import { SendJob } from '../types'
 
 export const HistoryPage = observer(() => {
   const store = useStore()
@@ -15,30 +19,27 @@ export const HistoryPage = observer(() => {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState<'history' | 'queue'>('history')
 
-  // 获取过滤后的历史记录
+  // 展开的行详情
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null)
+  // 待确认重发的 job id
+  const [retryConfirmId, setRetryConfirmId] = useState<string | null>(null)
+  const [retryLoading, setRetryLoading] = useState(false)
+
   const filteredHistory = store.sendHistory.filter(job => {
-    // 状态过滤
-    if (filterStatus !== 'all' && job.status !== filterStatus) {
-      return false
-    }
-    
-    // 搜索过滤
+    if (filterStatus !== 'all' && job.status !== filterStatus) return false
     if (searchTerm) {
       const contact = store.contacts.find(c => c.id === job.contactId)
-      const searchLower = searchTerm.toLowerCase()
-      
+      const q = searchTerm.toLowerCase()
       return (
-        job.subject.toLowerCase().includes(searchLower) ||
-        job.body.toLowerCase().includes(searchLower) ||
-        contact?.name.toLowerCase().includes(searchLower) ||
-        contact?.email.toLowerCase().includes(searchLower)
+        job.subject.toLowerCase().includes(q) ||
+        job.body.toLowerCase().includes(q) ||
+        contact?.name.toLowerCase().includes(q) ||
+        contact?.email.toLowerCase().includes(q)
       )
     }
-    
     return true
   })
 
-  // 统计信息
   const stats = {
     total: store.sendHistory.length,
     sent: store.sendHistory.filter(j => j.status === 'sent').length,
@@ -49,25 +50,13 @@ export const HistoryPage = observer(() => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'sent':
-        return <Badge variant="success" className="flex items-center gap-1">
-          <CheckCircle className="h-3 w-3" />
-          已发送
-        </Badge>
+        return <Badge variant="success" className="flex items-center gap-1"><CheckCircle className="h-3 w-3" />已发送</Badge>
       case 'failed':
-        return <Badge variant="destructive" className="flex items-center gap-1">
-          <XCircle className="h-3 w-3" />
-          失败
-        </Badge>
+        return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" />失败</Badge>
       case 'sending':
-        return <Badge variant="secondary" className="flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          发送中
-        </Badge>
+        return <Badge variant="secondary" className="flex items-center gap-1"><Clock className="h-3 w-3" />发送中</Badge>
       default:
-        return <Badge variant="outline" className="flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          等待中
-        </Badge>
+        return <Badge variant="outline" className="flex items-center gap-1"><Clock className="h-3 w-3" />等待中</Badge>
     }
   }
 
@@ -75,82 +64,115 @@ export const HistoryPage = observer(() => {
     const contact = store.contacts.find(c => c.id === contactId)
     return contact ? (
       <div className="flex items-center gap-2">
-        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
-          <span className="text-xs font-medium">
-            {contact.name.charAt(0).toUpperCase()}
-          </span>
+        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
+          <span className="text-xs font-medium">{contact.name.charAt(0).toUpperCase()}</span>
         </div>
         <div>
-          <p className="font-medium">{contact.name}</p>
+          <p className="font-medium text-sm">{contact.name}</p>
           <p className="text-xs text-muted-foreground">{contact.email}</p>
         </div>
       </div>
     ) : (
-      <span className="text-muted-foreground">未知联系人</span>
+      <span className="text-muted-foreground text-sm">未知联系人</span>
     )
   }
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '未发送'
-    const date = new Date(dateString)
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleString('zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
     })
   }
 
-  const handleViewDetails = (job: any) => {
-    const contact = store.contacts.find(c => c.id === job.contactId)
-    const details = `
-邮件详情：
-
-收件人：${contact?.name} (${contact?.email})
-主题：${job.subject}
-发送时间：${formatDate(job.sentAt)}
-状态：${job.status === 'sent' ? '✅ 已发送' : job.status === 'failed' ? '❌ 失败' : '⏳ 等待中'}
-
-邮件内容：
-${job.body}
-
-${job.error ? `\n错误信息：\n${job.error}` : ''}
-    `.trim()
-    
-    alert(details)
+  const handleRetry = async (job: SendJob) => {
+    setRetryLoading(true)
+    const newJob: SendJob = {
+      ...job,
+      id: `retry_${Date.now()}_${job.id}`,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      sentAt: undefined,
+      error: undefined,
+    }
+    store.addToQueue(newJob)
+    setRetryConfirmId(null)
+    setRetryLoading(false)
   }
 
-  const handleRetry = async (job: any) => {
-    const confirmRetry = window.confirm(`确定要重发这封邮件吗？\n\n收件人：${store.contacts.find(c => c.id === job.contactId)?.name}\n主题：${job.subject}`)
-    
-    if (!confirmRetry) return
-    
-    try {
-      // 将失败的邮件重新添加到发送队列
-      const newJob = {
-        ...job,
-        id: `retry_${Date.now()}_${job.id}`,
-        status: 'pending' as const,
-        createdAt: new Date().toISOString(),
-        sentAt: undefined,
-        error: undefined
-      }
-      
-      store.addToQueue(newJob)
-      alert('邮件已添加到发送队列，将在下次发送时处理')
-    } catch (error) {
-      alert('重发失败: ' + (error instanceof Error ? error.message : '未知错误'))
-    }
+  const toggleExpand = (id: string) => {
+    setExpandedJobId(prev => prev === id ? null : id)
+  }
+
+  const renderDetailRow = (job: SendJob) => {
+    const contact = store.contacts.find(c => c.id === job.contactId)
+    return (
+      <TableRow key={`detail-${job.id}`} className="bg-muted/30">
+        <TableCell colSpan={5} className="p-0">
+          <div className="px-6 py-4 space-y-3 border-t border-muted">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">收件人</p>
+                <p className="font-medium">{contact?.name ?? '未知'}</p>
+                <p className="text-muted-foreground">{contact?.email}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">发送时间</p>
+                <p>{formatDate(job.sentAt)}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">邮件主题</p>
+              <p className="font-medium text-sm">{job.subject}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">邮件内容</p>
+              <div className="rounded bg-muted p-3 text-sm whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+                {job.body}
+              </div>
+            </div>
+            {job.error && (
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">错误信息</p>
+                  <p className="text-sm text-red-700">{job.error}</p>
+                </div>
+              </div>
+            )}
+            {job.status === 'failed' && (
+              retryConfirmId === job.id ? (
+                <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  <p className="text-sm text-amber-800 flex-1">确定重发这封邮件？</p>
+                  <Button size="sm" variant="outline" onClick={() => setRetryConfirmId(null)}>取消</Button>
+                  <Button size="sm" onClick={() => handleRetry(job)} disabled={retryLoading}>
+                    {retryLoading ? '处理中...' : '确认重发'}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRetryConfirmId(job.id)}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  重发此邮件
+                </Button>
+              )
+            )}
+          </div>
+        </TableCell>
+      </TableRow>
+    )
   }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">发送记录</h1>
-        <p className="text-muted-foreground">
-          查看邮件发送历史记录和发送队列
-        </p>
+        <p className="text-muted-foreground">查看邮件发送历史记录和发送队列</p>
       </div>
 
       {/* 统计卡片 */}
@@ -209,7 +231,7 @@ ${job.error ? `\n错误信息：\n${job.error}` : ''}
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(value: any) => setActiveTab(value)}>
+      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="history" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
@@ -230,68 +252,48 @@ ${job.error ? `\n错误信息：\n${job.error}` : ''}
                 </div>
                 <div>
                   <CardTitle>发送历史记录</CardTitle>
-                  <CardDescription>
-                    查看所有已发送邮件的详细记录
-                  </CardDescription>
+                  <CardDescription>点击行可展开查看邮件详情</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               {/* 过滤器 */}
               <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Filter className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">状态过滤:</span>
-                  <div className="flex gap-2">
+                  <span className="text-sm font-medium">状态:</span>
+                  {(['all', 'sent', 'failed'] as const).map(s => (
                     <Button
-                      variant={filterStatus === 'all' ? "default" : "outline"}
+                      key={s}
+                      variant={filterStatus === s ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setFilterStatus('all')}
+                      onClick={() => setFilterStatus(s)}
                     >
-                      全部 ({stats.total})
+                      {s === 'all' ? `全部 (${stats.total})` : s === 'sent' ? `已发送 (${stats.sent})` : `失败 (${stats.failed})`}
                     </Button>
-                    <Button
-                      variant={filterStatus === 'sent' ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setFilterStatus('sent')}
-                    >
-                      已发送 ({stats.sent})
-                    </Button>
-                    <Button
-                      variant={filterStatus === 'failed' ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setFilterStatus('failed')}
-                    >
-                      失败 ({stats.failed})
-                    </Button>
-                  </div>
+                  ))}
                 </div>
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="搜索邮件主题、内容或联系人..."
+                    placeholder="搜索主题、内容或联系人..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={e => setSearchTerm(e.target.value)}
                     className="pl-9"
                   />
                 </div>
               </div>
 
-              {/* 表格 */}
               {filteredHistory.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="rounded-full bg-muted p-4">
                     <Mail className="h-8 w-8 text-muted-foreground" />
                   </div>
                   <h3 className="mt-4 text-lg font-semibold">
-                    {store.sendHistory.length === 0 
-                      ? '暂无发送记录' 
-                      : '没有匹配的发送记录'}
+                    {store.sendHistory.length === 0 ? '暂无发送记录' : '没有匹配的记录'}
                   </h3>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {store.sendHistory.length === 0 
-                      ? '发送邮件后，记录将显示在这里' 
-                      : '尝试使用不同的搜索条件'}
+                    {store.sendHistory.length === 0 ? '发送邮件后，记录将显示在这里' : '尝试其他搜索条件'}
                   </p>
                 </div>
               ) : (
@@ -302,61 +304,46 @@ ${job.error ? `\n错误信息：\n${job.error}` : ''}
                         <TableHead className="w-[100px]">状态</TableHead>
                         <TableHead>联系人</TableHead>
                         <TableHead>主题</TableHead>
-                        <TableHead className="w-[180px]">发送时间</TableHead>
-                        <TableHead className="w-[120px]">操作</TableHead>
+                        <TableHead className="w-[160px]">发送时间</TableHead>
+                        <TableHead className="w-[40px]" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredHistory.map(job => (
-                        <TableRow key={job.id}>
-                          <TableCell>
-                            {getStatusBadge(job.status)}
-                          </TableCell>
-                          <TableCell>
-                            {getContactInfo(job.contactId)}
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{job.subject}</p>
-                              {job.error && (
-                                <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
-                                  <AlertCircle className="h-3 w-3" />
-                                  <span>{job.error}</span>
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-sm">{formatDate(job.sentAt)}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewDetails(job)}
-                                className="flex items-center gap-1"
-                              >
-                                <Eye className="h-3 w-3" />
-                                详情
-                              </Button>
-                              {job.status === 'failed' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleRetry(job)}
-                                  className="flex items-center gap-1"
-                                >
-                                  <RefreshCw className="h-3 w-3" />
-                                  重发
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                        <>
+                          <TableRow
+                            key={job.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => toggleExpand(job.id)}
+                          >
+                            <TableCell>{getStatusBadge(job.status)}</TableCell>
+                            <TableCell>{getContactInfo(job.contactId)}</TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium text-sm">{job.subject}</p>
+                                {job.error && (
+                                  <div className="mt-0.5 flex items-center gap-1 text-xs text-red-600">
+                                    <AlertCircle className="h-3 w-3" />
+                                    {job.error}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-sm">
+                                <Calendar className="h-3 w-3 text-muted-foreground" />
+                                {formatDate(job.sentAt)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {expandedJobId === job.id
+                                ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              }
+                            </TableCell>
+                          </TableRow>
+                          {expandedJobId === job.id && renderDetailRow(job)}
+                        </>
                       ))}
                     </TableBody>
                   </Table>
@@ -365,7 +352,7 @@ ${job.error ? `\n错误信息：\n${job.error}` : ''}
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
               <div className="w-full text-center text-sm text-muted-foreground">
-                显示 {filteredHistory.length} 条记录，总计 {stats.total} 条
+                显示 {filteredHistory.length} 条，共 {stats.total} 条
               </div>
             </CardFooter>
           </Card>
@@ -380,9 +367,7 @@ ${job.error ? `\n错误信息：\n${job.error}` : ''}
                 </div>
                 <div>
                   <CardTitle>发送队列</CardTitle>
-                  <CardDescription>
-                    等待发送的邮件将在下次点击发送时处理
-                  </CardDescription>
+                  <CardDescription>等待发送的邮件将在下次点击发送时处理</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -393,30 +378,20 @@ ${job.error ? `\n错误信息：\n${job.error}` : ''}
                     <CheckCircle className="h-8 w-8 text-muted-foreground" />
                   </div>
                   <h3 className="mt-4 text-lg font-semibold">发送队列为空</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    所有邮件都已发送完成
-                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">所有邮件都已处理完成</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="rounded-lg border p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">队列状态</p>
-                        <p className="text-sm text-muted-foreground">
-                          {store.sendQueue.length} 封邮件等待发送
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() => store.startSending()}
-                        className="flex items-center gap-2"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                        立即处理队列
-                      </Button>
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-medium">队列状态</p>
+                      <p className="text-sm text-muted-foreground">{store.sendQueue.length} 封邮件等待发送</p>
                     </div>
+                    <Button onClick={() => store.startSending()} className="flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4" />
+                      立即处理队列
+                    </Button>
                   </div>
-
                   <div className="rounded-md border">
                     <Table>
                       <TableHeader>
@@ -424,34 +399,20 @@ ${job.error ? `\n错误信息：\n${job.error}` : ''}
                           <TableHead>联系人</TableHead>
                           <TableHead>主题</TableHead>
                           <TableHead className="w-[150px]">创建时间</TableHead>
-                          <TableHead className="w-[100px]">操作</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {store.sendQueue.map(job => (
                           <TableRow key={job.id}>
+                            <TableCell>{getContactInfo(job.contactId)}</TableCell>
                             <TableCell>
-                              {getContactInfo(job.contactId)}
+                              <p className="font-medium text-sm">{job.subject}</p>
                             </TableCell>
                             <TableCell>
-                              <p className="font-medium">{job.subject}</p>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 text-sm">
                                 <Calendar className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-sm">{formatDate(job.createdAt)}</span>
+                                {formatDate(job.createdAt)}
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewDetails(job)}
-                                className="flex items-center gap-1"
-                              >
-                                <Eye className="h-3 w-3" />
-                                详情
-                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}

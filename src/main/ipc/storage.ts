@@ -23,7 +23,13 @@ export function setupStorageHandlers(ipcMain: IpcMain) {
       emailConfig: await read('config.json'),
       contacts: (await read('contacts.json')) ?? [],
       sendHistory: (await read('history.json')) ?? [],
+      templates: (await read('templates.json')) ?? [],
     }
+  })
+
+  ipcMain.handle('storage:saveTemplates', async (_, templates) => {
+    await ensureDataDir()
+    await fs.writeFile(path.join(DATA_DIR, 'templates.json'), JSON.stringify(templates, null, 2))
   })
 
   ipcMain.handle('storage:saveConfig', async (_, config) => {

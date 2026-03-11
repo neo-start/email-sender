@@ -1,6 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx'
 import { Contact, EmailConfig, EmailTemplate, SendJob } from '../types'
-import { loadAllData, saveEmailConfig, saveContacts, saveSendHistory, backupData } from '../lib/storage'
+import { loadAllData, saveEmailConfig, saveContacts, saveSendHistory, saveTemplates, backupData } from '../lib/storage'
 import { emailSender } from '../lib/emailSender'
 
 export class EmailStore {
@@ -44,6 +44,7 @@ export class EmailStore {
         this.emailConfig = data.emailConfig
         this.contacts = data.contacts
         this.sendHistory = data.sendHistory
+        this.templates = data.templates ?? []
         
         // 如果已有邮箱配置，初始化邮件发送器
         if (this.emailConfig) {
@@ -94,6 +95,14 @@ export class EmailStore {
     }
   }
 
+  // 断开邮箱连接
+  async disconnectEmail() {
+    await saveEmailConfig(null)
+    runInAction(() => {
+      this.emailConfig = null
+    })
+  }
+
   // 添加联系人
   async addContact(contact: Contact) {
     runInAction(() => {
@@ -133,6 +142,30 @@ export class EmailStore {
       `"${c.name}","${c.email}","${c.group ?? ''}","${(c.tags ?? []).join(',')}"`
     )
     return [header, ...rows].join('\n')
+  }
+
+  // ── 模板 CRUD ──────────────────────────────
+
+  async addTemplate(template: EmailTemplate) {
+    runInAction(() => {
+      this.templates.push(template)
+    })
+    await saveTemplates(this.templates)
+  }
+
+  async updateTemplate(id: string, patch: Partial<Pick<EmailTemplate, 'name' | 'subject' | 'body'>>) {
+    runInAction(() => {
+      const t = this.templates.find(t => t.id === id)
+      if (t) Object.assign(t, patch, { updatedAt: new Date().toISOString() })
+    })
+    await saveTemplates(this.templates)
+  }
+
+  async deleteTemplate(id: string) {
+    runInAction(() => {
+      this.templates = this.templates.filter(t => t.id !== id)
+    })
+    await saveTemplates(this.templates)
   }
 
   // 保存联系人

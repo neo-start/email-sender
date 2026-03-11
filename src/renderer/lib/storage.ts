@@ -1,13 +1,14 @@
-import { Contact, EmailConfig, SendJob } from '../types'
+import { Contact, EmailConfig, EmailTemplate, SendJob } from '../types'
 
 declare global {
   interface Window {
     electronAPI: {
       storage: {
-        load: () => Promise<{ emailConfig: EmailConfig | null; contacts: Contact[]; sendHistory: SendJob[] }>
+        load: () => Promise<{ emailConfig: EmailConfig | null; contacts: Contact[]; sendHistory: SendJob[]; templates: EmailTemplate[] }>
         saveConfig: (config: EmailConfig | null) => Promise<void>
         saveContacts: (contacts: Contact[]) => Promise<void>
         saveHistory: (history: SendJob[]) => Promise<void>
+        saveTemplates: (templates: EmailTemplate[]) => Promise<void>
         backup: () => Promise<string>
       }
       email: {
@@ -34,6 +35,10 @@ export async function saveContacts(contacts: Contact[]) {
 
 export async function saveSendHistory(history: SendJob[]) {
   await window.electronAPI.storage.saveHistory(history)
+}
+
+export async function saveTemplates(templates: EmailTemplate[]) {
+  await window.electronAPI.storage.saveTemplates(templates)
 }
 
 export async function backupData() {
