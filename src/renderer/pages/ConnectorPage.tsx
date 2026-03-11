@@ -86,7 +86,7 @@ export const ConnectorPage = observer(() => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">邮箱连接器</h1>
+        <h1 className="text-xl font-semibold tracking-tight">邮箱连接器</h1>
         <p className="text-muted-foreground">连接你的邮箱账户，开始发送邮件</p>
       </div>
 

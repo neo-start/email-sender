@@ -171,7 +171,7 @@ export const HistoryPage = observer(() => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">发送记录</h1>
+        <h1 className="text-xl font-semibold tracking-tight">发送记录</h1>
         <p className="text-muted-foreground">查看邮件发送历史记录和发送队列</p>
       </div>
 
@@ -182,7 +182,7 @@ export const HistoryPage = observer(() => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">总计</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-2xl font-bold tabular-nums">{stats.total}</p>
               </div>
               <div className="rounded-full bg-primary/10 p-3">
                 <Mail className="h-6 w-6 text-primary" />
@@ -195,7 +195,7 @@ export const HistoryPage = observer(() => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">已发送</p>
-                <p className="text-2xl font-bold text-green-600">{stats.sent}</p>
+                <p className="text-2xl font-bold tabular-nums text-green-600">{stats.sent}</p>
               </div>
               <div className="rounded-full bg-green-100 p-3">
                 <CheckCircle className="h-6 w-6 text-green-600" />
@@ -208,7 +208,7 @@ export const HistoryPage = observer(() => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">失败</p>
-                <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
+                <p className="text-2xl font-bold tabular-nums text-red-600">{stats.failed}</p>
               </div>
               <div className="rounded-full bg-red-100 p-3">
                 <XCircle className="h-6 w-6 text-red-600" />
@@ -221,7 +221,7 @@ export const HistoryPage = observer(() => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">等待中</p>
-                <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
+                <p className="text-2xl font-bold tabular-nums text-amber-600">{stats.pending}</p>
               </div>
               <div className="rounded-full bg-amber-100 p-3">
                 <Clock className="h-6 w-6 text-amber-600" />

@@ -148,7 +148,7 @@ export const ContactsPage = observer(() => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">联系人管理</h1>
+        <h1 className="text-xl font-semibold tracking-tight">联系人管理</h1>
         <p className="text-muted-foreground">管理联系人列表，支持 CSV 导入和手动添加</p>
       </div>
 
@@ -495,7 +495,7 @@ export const ContactsPage = observer(() => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">总联系人</p>
-                <p className="text-2xl font-bold">{store.contacts.length}</p>
+                <p className="text-2xl font-bold tabular-nums">{store.contacts.length}</p>
               </div>
               <div className="rounded-full bg-primary/10 p-3">
                 <Users className="h-6 w-6 text-primary" />
@@ -508,7 +508,7 @@ export const ContactsPage = observer(() => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">分组数量</p>
-                <p className="text-2xl font-bold">
+                <p className="text-2xl font-bold tabular-nums">
                   {new Set(store.contacts.map(c => c.group)).size}
                 </p>
               </div>
@@ -523,7 +523,7 @@ export const ContactsPage = observer(() => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">最近添加</p>
-                <p className="text-2xl font-bold">
+                <p className="text-2xl font-bold tabular-nums">
                   {store.contacts.length > 0
                     ? new Date(Math.max(...store.contacts.map(c => new Date(c.createdAt).getTime())))
                       .toLocaleDateString('zh-CN')

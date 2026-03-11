@@ -199,7 +199,7 @@ export const SendPage = observer(() => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">发送邮件</h1>
+        <h1 className="text-xl font-semibold tracking-tight">发送邮件</h1>
         <p className="text-muted-foreground">撰写个性化邮件并批量发送给联系人</p>
       </div>
 
