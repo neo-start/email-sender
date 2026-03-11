@@ -1,73 +1,44 @@
-# React + TypeScript + Vite
+# 邮件发送工具
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+基于 Electron + React + TypeScript 的桌面批量邮件发送工具。
 
-Currently, two official plugins are available:
+## 功能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **邮箱连接**：支持 Gmail（应用专用密码）和任意 SMTP，连接后可一键断开
+- **联系人管理**：CSV 批量导入（带预览/重复检测）、手动添加、分组标签、搜索、删除、导出
+- **批量发送**：按分组筛选收件人、变量替换 `{name}` `{email}`、邮件预览、实时进度条 + 滚动日志
+- **模板**：保存/载入/删除常用邮件模板
+- **发送记录**：历史查询（按状态过滤、关键词搜索）、失败重发、发送队列管理
 
-## React Compiler
+## 技术栈
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Electron 41 + electron-vite
+- React 19 + TypeScript
+- MobX（状态管理）
+- Tailwind CSS + CVA（UI）
+- Nodemailer（邮件发送）
+- PapaParse（CSV 解析）
 
-## Expanding the ESLint configuration
+## 开发
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
+pnpm dev        # 启动开发模式（Electron 窗口）
+pnpm build      # 构建
+pnpm package    # 打包为可分发应用
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 数据存储
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+所有数据存储在本地：`~/Library/Application Support/email-sender/data/`
+- `config.json` 邮箱配置
+- `contacts.json` 联系人
+- `history.json` 发送记录
+- `templates.json` 邮件模板
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 使用说明
+
+1. 打开「邮箱连接」，配置 Gmail 或 SMTP
+2. 打开「联系人」，导入 CSV 或手动添加
+3. 打开「发送邮件」，选择收件人、撰写内容、点击发送
+4. 在「发送记录」查看历史，对失败邮件一键重发
